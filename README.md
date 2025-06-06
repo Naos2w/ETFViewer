@@ -1,4 +1,4 @@
-# fubonTest
+# ETFViewer
 
 ## Project Overview 專案簡介
 
@@ -45,19 +45,16 @@
    git clone https://github.com/your-username/your-repo.git
    cd your-repo
    ```
-
 2. **Restore NuGet packages**
 
    ```bash
    dotnet restore
    ```
-
 3. **Run the project 執行專案**
 
    ```bash
    dotnet run
    ```
-
 4. **Open in browser 瀏覽器開啟**
 
    Navigate to:
