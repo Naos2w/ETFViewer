@@ -1,0 +1,227 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div id="app">
+    <div class="table_top">
+        <div class="">
+            <label id="rfs">Refresh second: </label>
+            <input class="input" type="number" v-model.number="interval" min="0" max="120" v-on:change="startTimer" />
+            <span id="cd">Countdown: <b>{{ countdown }}</b> s</span>
+        </div>
+        <div class="toggle">
+            <button class="btn" :class="{active: tableMode==='vertical'}" v-on:click="tableMode='vertical'"
+                title="vertical">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+            </button>
+            <button class="btn" :class="{active: tableMode==='horizontal'}" v-on:click="tableMode='horizontal'"
+                title="horizontal">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+    </div>
+    <div v-if="isLoading" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+    <div class="table_ctn" v-if="!isLoading">
+        <table v-if="tableMode==='horizontal' && etfs.length" class="custom-etf-table">
+            <thead>
+                <tr>
+                    <th v-for="head in etf_vtc_Header" :rowspan="head.rowspan">
+                        {{ head.text }}
+                    </th>
+                    @* @foreach (var head in Model.EtfHeaders)
+                    {
+                        <th rowspan="@(head.RowSpan)">@head.Text</th>
+                    } *@
+                </tr>
+                <tr>
+                    <th v-for="headLy2 in etf_vtc_Header_ly2">
+                        {{ headLy2 }}
+                    </th>
+                    @* @foreach (var headLy2 in Model.EtfLy2Headers)
+                    {
+                        <th>@headLy2</th>
+                    } *@
+                </tr>
+            </thead>
+            <tbody>
+                @* @foreach (var etf in Model.EtfData)
+                {
+                    <tr class="align-middle">
+                        <td>@Html.Raw(etf.CodeName)</td>
+                        <td>@etf.PreviousNav</td>
+                        <td>@etf.EstimatedNav</td>
+                        <td>@etf.NavChange</td>
+                        <td>@etf.PreviousClose</td>
+                        <td>@etf.TransactionPrice</td>
+                        <td>@etf.PriceChange</td>
+                        <td>@etf.PremiumDiscount</td>
+                        <td>@etf.DateTime</td>
+                    </tr>
+                } *@
+                <tr v-for="etf in etfs" :key="etf.a">
+                    <td v-html="etf.a + '<br/>' + etf.b"></td>
+                    <td>{{ etf.h }}</td>
+                    <td>{{ etf.f }}</td>
+                    <td :class="parseFloat(calcNavChange(etf.f, etf.h)) > 0 ? 'text-rise' : 'text-fall'">
+                        {{ calcNavChange(etf.f, etf.h).toLocaleString(undefined, { style: "percent",
+                        minimumFractionDigits: 2 })}}
+                    </td>
+                    <td>{{ etf.l }}</td>
+                    <td>{{ etf.e }}</td>
+                    <td :class="parseFloat(calcPriceChange(etf.e, etf.l)) > 0 ? 'text-rise' : 'text-fall'">
+                        {{ calcPriceChange(etf.e, etf.l).toLocaleString(undefined, { style: "percent",
+                        minimumFractionDigits: 2 })}}
+                    </td>
+                    <td>{{ calcPremiumDiscount(etf.e, etf.f) }}</td>
+                    <td>{{ formatDate(etf.i, etf.j) }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="hz_table" v-if="tableMode==='vertical'">
+            <table v-if="etfs.length" class="table custom-etf-table" v-for="etf in etfs">
+                <thead>
+                    <tr>
+                        <th :colspan="2">{{etf.a + ' ' + etf.b}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="col in etf_hrz_colname" :key="col.text">
+                        <td>{{col.text}}</td>
+                        <td>
+                            <template v-if="col.valIdx">
+                                {{etf[col.valIdx]}}
+                            </template>
+                            <template v-else-if="col.type === 'calcNavChange'">
+                                <span :class="parseFloat(calcNavChange(etf.f, etf.h)) > 0 ? 'text-rise' : 'text-fall'">
+                                    {{ calcNavChange(etf.f, etf.h).toLocaleString(undefined, { style: "percent",
+                                    minimumFractionDigits: 2 })}}
+                                </span>
+                            </template>
+                            <template v-else-if="col.type === 'calcPriceChange'">
+                                <span
+                                    :class="parseFloat(calcPriceChange(etf.e, etf.l)) > 0 ? 'text-rise' : 'text-fall'">
+                                    {{ calcPriceChange(etf.e, etf.l).toLocaleString(undefined, { style: "percent",
+                                    minimumFractionDigits: 2 })}}
+                                </span>
+                            </template>
+                            <template v-else-if="col.type === 'calcPremiumDiscount'">
+                                {{calcPremiumDiscount(etf.e, etf.f)}}
+                            </template>
+                            <template v-else-if="col.type === 'formatDate'">
+                                {{formatDate(etf.i, etf.j)}}
+                            </template>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const { createApp, ref, onMounted } = Vue
+
+        createApp({
+            setup() {
+                const etfs = ref([])
+                const etf_vtc_Header = ref([
+                    { text: "ETF代號與名稱", rowspan: 2 },
+                    { text: "前一營業日淨值", rowspan: 1 },
+                    { text: "預估淨值", rowspan: 1 },
+                    { text: "漲跌幅", rowspan: 1 },
+                    { text: "昨收市價", rowspan: 1 },
+                    { text: "成交價", rowspan: 1 },
+                    { text: "漲跌幅", rowspan: 1 },
+                    { text: "即時折溢價幅", rowspan: 1 },
+                    { text: "資料日期與時間", rowspan: 2 }
+                ]);
+                const etf_vtc_Header_ly2 = ref(["A", "B", "(B-A) / A", "C", "D", "(D-C) / C", "(D-B) / B"]);
+                const etf_hrz_colname = ref([
+                    { text: "前一營業日淨值", valIdx: "h" },
+                    { text: "預估淨值", valIdx: "f" },
+                    { text: "漲跌幅", type: "calcNavChange" },
+                    { text: "昨收市價", valIdx: "l" },
+                    { text: "成交價", valIdx: "e" },
+                    { text: "漲跌幅", type: "calcPriceChange" },
+                    { text: "即時折溢價幅", type: "calcPremiumDiscount" },
+                    { text: "資料日期與時間", type: "formatDate" }
+                ]);
+                const tableMode = ref("horizontal");
+
+                const formatDate = (i, j) => {
+                    if (!i || i.length !== 8) return ""
+                    return `${i.slice(0, 4)}/${i.slice(4, 6)}/${i.slice(6, 8)} ${j}`
+                }
+                const calcNavChange = (f, h) => {
+                    const fNum = parseFloat(f)
+                    const hNum = parseFloat(h)
+                    if (!hNum) return ""
+                    return ((fNum - hNum) / hNum);
+                }
+                const calcPriceChange = (e, l) => {
+                    const eNum = parseFloat(e)
+                    const lNum = parseFloat(l)
+                    if (!lNum) return ""
+                    return ((eNum - lNum) / lNum);
+                }
+                const calcPremiumDiscount = (e, f) => {
+                    const eNum = parseFloat(e)
+                    const fNum = parseFloat(f)
+                    if (!eNum) return ""
+                    return ((eNum - fNum) / eNum).toLocaleString(undefined, { style: "percent", minimumFractionDigits: 2 })
+                }
+
+                const countdown = ref(15);
+                const interval = ref(15);
+                let timerId = null;
+
+                const fetchData = async () => {
+                    isLoading.value = true;
+                    try {
+                        const res = await fetch('/js/data.json');
+                        const data = await res.json();
+                        etfs.value = data.msgArray;
+                    } finally {
+                        isLoading.value = false;
+                    }
+                }
+
+                const startTimer = () => {
+                    if (timerId) clearInterval(timerId);
+
+                    if (interval.value === 0) {
+                        countdown.value = 0;
+                        return;
+                    }
+                    countdown.value = interval.value;
+                    timerId = setInterval(() => {
+                        countdown.value--;
+                        if (countdown.value <= 0) {
+                            fetchData();
+                            countdown.value = interval.value;
+                        }
+                    }, 1000);
+                }
+                const isLoading = ref(true);
+
+                onMounted(async () => {
+                    await fetchData();
+                    startTimer();
+                })
+
+                return {
+                    etfs, etf_vtc_Header, etf_vtc_Header_ly2, etf_hrz_colname, tableMode,
+                    formatDate, calcNavChange, calcPriceChange, calcPremiumDiscount,
+                    countdown, interval, startTimer, isLoading
+                }
+            }
+        }).mount("#app")
+    </script>
+}

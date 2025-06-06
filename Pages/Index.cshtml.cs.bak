@@ -1,0 +1,95 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace fubonTest.Pages;
+
+public class EtfHeaders
+{
+    public string Header { get; set; }
+}
+public class EtfData
+{//
+    public string a { get; set; } // 
+    public string b { get; set; } // 
+    public string c { get; set; } // 
+    public string d { get; set; } // 
+    public string e { get; set; } // 
+    public string f { get; set; } // 
+    public string g { get; set; } // 
+    public string h { get; set; } // 
+    public string i { get; set; } // 
+    public string j { get; set; } // 
+    public string k { get; set; } // 
+    public string l { get; set; } // 
+    public string m { get; set; } // 
+//
+    public string etfCode { get; set; }
+    public string etfName { get; set; }
+    public string prevNav { get; set; }
+    public string estimatedNav { get; set; }
+    public string change { get; set; }
+    public string prevClosePrice { get; set; }
+    public string trxPrice { get; set; }
+    public string realtimeDiscount { get; set; }
+    public string DateTime { get; set; }
+}
+
+public class ApiResponse
+{
+    public List<EtfData> msgArray { get; set; }
+    public string refURL { get; set; }
+    public string userDelay { get; set; }
+    public string rtMessage { get; set; }
+    public string rtCode { get; set; }
+}
+public class IndexModel : PageModel
+{
+    private readonly ILogger<IndexModel> _logger;
+
+    public IndexModel(ILogger<IndexModel> logger)
+    {
+        _logger = logger;
+    }
+    public List<string> EtfHeaders { get; set; } = new();
+    public List<EtfData> EtfData { get; set; } = new();
+
+    public async Task OnGetAsync()
+    {
+        _logger.LogInformation("OnGet Start");
+        string data = await GetFubonDataAsync();
+        // _logger.LogInformation("Data: " + data);
+
+        var result = System.Text.Json.JsonSerializer.Deserialize<ApiResponse>(data);
+        EtfData = result?.Data ?? new List<EtfData>();
+        foreach (var etf in EtfData)
+        {
+            _logger.LogInformation("EtfName: " + etf.etfName);
+        }
+        
+        EtfHeaders = new List<string> {
+            "ETF Code", "ETF Name", "Previous NAV", "Estimated NAV", "Change (%)",
+            "Previous Close Price", "Transaction Price", "Real-time Premium/Discount (%)", "Data DateTime"
+        };
+        _logger.LogInformation("OnGet End");
+    }
+
+    public async Task<string> GetFubonDataAsync()
+    {
+        try
+        {
+            using (var client = new HttpClient())
+            {
+                var url = "https://websys.fsit.com.tw/FubonETF/TWSE/FubonRealtime.aspx?type=A0010";
+                var response = await client.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                var content = await response.Content.ReadAsStringAsync();
+                return content; // 這裡回傳的是原始字串（通常是 JSON 或 HTML）
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetFubonDataAsync Exception");
+            throw ex;
+        }
+    }
+}
