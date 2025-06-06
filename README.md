@@ -28,7 +28,7 @@
 
 ---
 
-## 技術棧
+## Tech Stack 技術棧
 
 - ASP.NET Core 9.0 Razor Pages
 - Vue 3 (CDN)
